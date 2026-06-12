@@ -1,0 +1,36 @@
+{
+  "name": "work-mood-tracker",
+  "version": "0.1.0",
+  "description": "打工状态记录器 · 桌面悬浮小组件",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "dist:all": "electron-builder -mwl"
+  },
+  "build": {
+    "appId": "com.workmood.tracker",
+    "productName": "打工状态记录器",
+    "files": [
+      "index.html",
+      "css/**",
+      "js/**",
+      "electron/**"
+    ],
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Utility"
+    }
+  },
+  "devDependencies": {
+    "electron": "^42.4.0",
+    "electron-builder": "^26.15.2"
+  }
+}
