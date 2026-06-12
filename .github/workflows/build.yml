@@ -10,6 +10,10 @@ on:
 permissions:
   contents: write
 
+# 让 JS actions 运行在 Node 24 上（消除 Node 20 弃用警告）
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     strategy:
@@ -32,17 +36,16 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
         run: npm ci
 
       - name: Build with electron-builder
+        # 不设 CSC_IDENTITY_AUTO_DISCOVERY=false，让 electron-builder 对 mac 做 ad-hoc 签名
+        # （否则产出的 App 完全无签名，在 Apple 芯片上会被报「已损坏」）
         run: npx electron-builder --publish never
-        env:
-          # 不做 mac 代码签名（个人验证用，避免构建卡住）
-          CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

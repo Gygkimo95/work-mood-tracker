@@ -67,7 +67,17 @@ npm run dist     # 为当前系统出安装包（Win→.exe / mac→.dmg / Linux
 git tag v0.1.0 && git push origin v0.1.0
 ```
 
-这样在新 Mac 上**连构建都不用**，直接下载 `.dmg` 安装即可（首次打开仍需对未签名 App 右键“打开”）。
+这样在新 Mac 上**连构建都不用**，直接下载 `.dmg` 安装即可。
+
+### macOS 打开时提示「已损坏，无法打开」？
+
+这不是真的损坏，而是 macOS Gatekeeper 对“未付费签名 + 从网上下载”的 App 的隔离机制（Apple 芯片上会显示“已损坏”）。把 App 拖进「应用程序」后，终端执行一次即可：
+
+```bash
+xattr -cr "/Applications/打工状态记录器.app"
+```
+
+之后正常双击打开。（本项目对 macOS 做了 ad-hoc 签名，去掉隔离标记后即可运行；要彻底免这一步，需要 Apple 开发者账号做正式签名 + 公证。）
 
 ## 数据与隐私
 
