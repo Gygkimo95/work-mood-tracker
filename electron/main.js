@@ -1,84 +1,145 @@
-const { app, BrowserWindow, ipcMain, screen, globalShortcut } = require("electron");
+const {
+  app, BrowserWindow, ipcMain, screen, globalShortcut, Tray, Menu, nativeImage,
+} = require("electron");
 const path = require("path");
 const fs = require("fs");
 
-// 迷你（悬浮小窗）与完整（看时间线/统计）两种尺寸
-const MINI = { width: 340, height: 280 };
+const POPOVER = { width: 380, height: 320 };
 const FULL = { width: 900, height: 760 };
-
-// 全局快捷键：一键唤起快速记录
 const QUICK_SHORTCUT = "CommandOrControl+Shift+Space";
+const isMac = process.platform === "darwin";
 
-let win = null;
+let tray = null;
+let popover = null;
+let fullWin = null;
 
-// 数据文件：存在系统用户目录，方便备份 / 跨设备
 function dataFilePath() {
   return path.join(app.getPath("userData"), "data.json");
 }
+function indexPath() {
+  return path.join(__dirname, "..", "index.html");
+}
+function preloadPath() {
+  return path.join(__dirname, "preload.js");
+}
 
-function createWindow() {
-  const display = screen.getPrimaryDisplay();
-  const { width: sw } = display.workAreaSize;
-
-  win = new BrowserWindow({
-    width: MINI.width,
-    height: MINI.height,
-    // 默认浮在右上角
-    x: sw - MINI.width - 24,
-    y: 24,
+// ---------- 弹出面板（菜单栏 popover 风格） ----------
+function createPopover() {
+  popover = new BrowserWindow({
+    width: POPOVER.width,
+    height: POPOVER.height,
+    show: false,
     frame: false,
-    resizable: true,
-    alwaysOnTop: true,
-    skipTaskbar: false,
-    minWidth: 300,
-    minHeight: 200,
-    backgroundColor: "#f5f3ee",
+    resizable: false,
+    movable: false,
+    transparent: true,
+    hasShadow: false, // 用 CSS 画圆角阴影
+    skipTaskbar: true,
+    fullscreenable: false,
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
+      preload: preloadPath(),
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
+  popover.loadFile(indexPath(), { hash: "popover" });
 
-  // 悬浮窗：在全屏应用之上也尽量可见
-  win.setAlwaysOnTop(true, "floating");
-  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-
-  win.loadFile(path.join(__dirname, "..", "index.html"), { hash: "mini" });
+  // 失焦即收起，模拟原生 popover
+  popover.on("blur", () => {
+    if (popover && !popover.webContents.isDevToolsFocused()) popover.hide();
+  });
 }
 
-// 迷你 / 完整 尺寸切换（保持右上角锚点不跳动）
-ipcMain.on("set-mode", (_e, mode) => {
-  if (!win) return;
-  const target = mode === "full" ? FULL : MINI;
-  const [x, y] = win.getPosition();
-  const [w] = win.getSize();
-  const right = x + w;
-  win.setBounds({
-    x: Math.max(0, right - target.width),
-    y,
-    width: target.width,
-    height: target.height,
+function positionPopover() {
+  if (!popover) return;
+  const { width } = popover.getBounds();
+  if (tray && isMac) {
+    const b = tray.getBounds();
+    const disp = screen.getDisplayNearestPoint({ x: b.x, y: b.y });
+    let x = Math.round(b.x + b.width / 2 - width / 2);
+    x = Math.min(
+      Math.max(x, disp.workArea.x + 6),
+      disp.workArea.x + disp.workArea.width - width - 6
+    );
+    const y = Math.round(b.y + b.height + 4);
+    popover.setPosition(x, y, false);
+  } else {
+    const disp = screen.getPrimaryDisplay();
+    const x = Math.round(disp.workArea.x + disp.workArea.width - width - 16);
+    const y = Math.round(disp.workArea.y + 40);
+    popover.setPosition(x, y, false);
+  }
+}
+
+function showPopover() {
+  if (!popover || popover.isDestroyed()) createPopover();
+  positionPopover();
+  popover.show();
+  popover.focus();
+  popover.webContents.send("quick-record");
+}
+
+function togglePopover() {
+  if (popover && !popover.isDestroyed() && popover.isVisible()) popover.hide();
+  else showPopover();
+}
+
+// ---------- 完整窗口（时间线 / 统计 / 设置） ----------
+function openFull() {
+  if (fullWin && !fullWin.isDestroyed()) {
+    fullWin.show();
+    fullWin.focus();
+    return;
+  }
+  fullWin = new BrowserWindow({
+    width: FULL.width,
+    height: FULL.height,
+    title: "打工状态记录器",
+    backgroundColor: "#f5f3ee",
+    webPreferences: {
+      preload: preloadPath(),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
   });
-});
+  fullWin.loadFile(indexPath(), { hash: "full" });
+  if (isMac && app.dock) app.dock.show();
+  fullWin.on("closed", () => {
+    fullWin = null;
+    if (isMac && app.dock) app.dock.hide();
+  });
+}
 
-ipcMain.on("close-window", () => {
-  if (win) win.close();
-});
+// ---------- 菜单栏图标 ----------
+function buildTray() {
+  try {
+    tray = new Tray(nativeImage.createEmpty());
+    if (isMac) tray.setTitle("🐱"); // macOS 菜单栏直接用 emoji 当图标
+    tray.setToolTip("打工状态记录器 · 点我记录此刻");
 
-ipcMain.on("minimize-window", () => {
-  if (win) win.minimize();
-});
+    const menu = Menu.buildFromTemplate([
+      { label: "快速记录", accelerator: QUICK_SHORTCUT, click: showPopover },
+      { label: "打开完整视图…", click: openFull },
+      { type: "separator" },
+      { label: "退出", role: "quit" },
+    ]);
+
+    // 左键弹面板，右键出菜单
+    tray.on("click", togglePopover);
+    tray.on("right-click", () => tray.popUpContextMenu(menu));
+  } catch (err) {
+    console.warn("菜单栏图标创建失败（Linux 可能需要 libappindicator）:", err.message);
+  }
+}
 
 // ---------- 本地 JSON 文件存储 ----------
 ipcMain.on("store:load-sync", (e) => {
   try {
     e.returnValue = fs.readFileSync(dataFilePath(), "utf8");
   } catch {
-    e.returnValue = null; // 文件还不存在
+    e.returnValue = null;
   }
 });
-
 ipcMain.on("store:save", (_e, json) => {
   try {
     fs.writeFileSync(dataFilePath(), json, "utf8");
@@ -87,33 +148,44 @@ ipcMain.on("store:save", (_e, json) => {
   }
 });
 
-// ---------- 全局快捷键：唤起快速记录 ----------
-function quickRecord() {
-  if (!win) {
-    createWindow();
-    return;
-  }
-  if (win.isMinimized()) win.restore();
-  win.show();
-  win.focus();
-  win.webContents.send("quick-record"); // 通知页面切到迷你记录模式
-}
+// ---------- 渲染进程的窗口控制 ----------
+ipcMain.on("hide-window", () => {
+  if (popover && !popover.isDestroyed()) popover.hide();
+});
+ipcMain.on("open-full", openFull);
 
 app.whenReady().then(() => {
-  createWindow();
+  if (isMac && app.dock) app.dock.hide(); // 纯菜单栏应用，不占 Dock
 
-  const ok = globalShortcut.register(QUICK_SHORTCUT, quickRecord);
+  // macOS 留一份最简菜单，保证输入框可复制粘贴、Cmd+Q 可用
+  if (isMac) {
+    Menu.setApplicationMenu(
+      Menu.buildFromTemplate([
+        { label: app.name, submenu: [{ role: "quit" }] },
+        {
+          label: "Edit",
+          submenu: [
+            { role: "undo" }, { role: "redo" }, { type: "separator" },
+            { role: "cut" }, { role: "copy" }, { role: "paste" }, { role: "selectAll" },
+          ],
+        },
+      ])
+    );
+  }
+
+  buildTray();
+  createPopover();
+  if (!isMac) openFull(); // 非 mac 先给个可见窗口（托盘图标在 Win/Linux 需图标资源，后续再补）
+
+  const ok = globalShortcut.register(QUICK_SHORTCUT, togglePopover);
   if (!ok) console.warn("全局快捷键注册失败:", QUICK_SHORTCUT);
 
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (isMac) showPopover();
   });
 });
 
-app.on("will-quit", () => {
-  globalShortcut.unregisterAll();
-});
+app.on("will-quit", () => globalShortcut.unregisterAll());
 
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") app.quit();
-});
+// 菜单栏应用：关掉完整窗口不退出整个 App
+app.on("window-all-closed", () => {});

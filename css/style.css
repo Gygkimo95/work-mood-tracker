@@ -520,49 +520,57 @@ body {
   .content { padding: 18px 16px; }
 }
 
-/* ---------- 桌面端（Electron）悬浮小窗 ---------- */
-.desktop-bar { display: none; }
+/* ---------- 桌面端（Electron） ---------- */
+.popover-head { display: none; }
 
-body.is-desktop .desktop-bar {
+/* 完整窗口：顶栏不再 sticky */
+body.is-desktop.full .topbar { position: static; }
+
+/* ---------- 弹出面板（菜单栏 popover） ---------- */
+body.popover {
+  background: transparent;
+  padding: 9px;
+  overflow: hidden;
+}
+body.popover .app {
+  height: calc(100vh - 18px);
+  border-radius: 16px;
+  background: var(--bg);
+  box-shadow: 0 14px 40px rgba(40, 35, 25, 0.28);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 面板里只显示：标题条 + 快速记录按钮 */
+body.popover .topbar,
+body.popover .prompt-row,
+body.popover .recent-block,
+body.popover #view-timeline,
+body.popover #view-stats,
+body.popover #view-settings { display: none; }
+
+body.popover .popover-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px 6px 14px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--line);
-  -webkit-app-region: drag; /* 拖动整个条移动窗口 */
-  user-select: none;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px 8px;
 }
-body.is-desktop .desktop-bar .db-title { font-size: 13px; font-weight: 700; color: var(--ink-soft); }
-body.is-desktop .desktop-bar .db-spacer { flex: 1; }
-body.is-desktop .desktop-bar .db-btn {
-  -webkit-app-region: no-drag; /* 按钮可点 */
-  border: none; background: transparent; cursor: pointer;
-  width: 26px; height: 26px; border-radius: 7px;
-  font-size: 14px; color: var(--ink-soft); display: grid; place-items: center;
+body.popover .popover-head .ph-title { font-size: 14px; font-weight: 700; }
+body.popover .popover-head .ph-more {
+  border: 1px solid var(--line); background: var(--surface);
+  border-radius: 8px; padding: 4px 10px; cursor: pointer;
+  font-size: 12px; font-weight: 600; color: var(--ink-soft); font-family: inherit;
 }
-body.is-desktop .desktop-bar .db-btn:hover { background: var(--surface-2); }
-body.is-desktop .desktop-bar .db-close:hover { background: #fdeaea; color: var(--cat-drain); }
+body.popover .popover-head .ph-more:hover { background: var(--surface-2); }
 
-/* 桌面端整体更紧凑，顶栏不再 sticky */
-body.is-desktop { background: var(--surface); }
-body.is-desktop .app { min-height: 100vh; }
-body.is-desktop .topbar { position: static; background: transparent; padding-top: 16px; }
-
-/* 迷你模式：只留快速记录按钮 */
-body.mini .topbar,
-body.mini .prompt-row,
-body.mini .recent-block,
-body.mini #view-timeline,
-body.mini #view-stats,
-body.mini #view-settings { display: none; }
-
-body.mini .content { padding: 10px; }
-body.mini #view-log { display: block; }
-body.mini .state-grid {
+body.popover .content { padding: 10px 12px 12px; flex: 1; overflow-y: auto; }
+body.popover #view-log { display: block; }
+body.popover .state-grid {
   grid-template-columns: repeat(3, 1fr);
   gap: 7px;
 }
-body.mini .state-btn { padding: 9px 6px; border-radius: 12px; gap: 5px; }
-body.mini .state-btn .emoji { font-size: 22px; }
-body.mini .state-btn .label { font-size: 12px; }
+body.popover .state-btn { padding: 9px 6px; border-radius: 12px; gap: 5px; }
+body.popover .state-btn .emoji { font-size: 22px; }
+body.popover .state-btn .label { font-size: 12px; }

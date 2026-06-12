@@ -130,6 +130,10 @@
     // 若时间线/统计正展示，保持同步
     if ($("#view-timeline").classList.contains("active")) renderTimeline();
     if ($("#view-stats").classList.contains("active")) renderStats();
+    // 弹出面板：记录完短暂展示反馈后自动收起
+    if (isPopover && window.desktop) {
+      setTimeout(() => window.desktop.hide(), 550);
+    }
   }
 
   function renderRecent() {
@@ -607,32 +611,28 @@
     $("#emojiTrigger").setAttribute("aria-expanded", "false");
   }
 
-  // ---------- 桌面端（悬浮小窗） ----------
-  let miniMode = true;
+  // ---------- 桌面端（菜单栏 popover / 完整窗口） ----------
+  let isPopover = false;
 
   function setupDesktop() {
     if (!window.desktop) return;
     document.body.classList.add("is-desktop");
-    // 通过 URL hash 决定初始模式（main.js 默认以 #mini 加载）
-    miniMode = location.hash.replace("#", "") !== "full";
-    applyMode();
-  }
-
-  function applyMode() {
-    document.body.classList.toggle("mini", miniMode);
-    if (miniMode) {
-      // 迷你模式回到「记录」页，展开时直接看到记录
-      $$(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === "log"));
-      $$(".view").forEach((v) => v.classList.toggle("active", v.id === "view-log"));
+    const mode = location.hash.replace("#", "");
+    if (mode === "full") {
+      document.body.classList.add("full");
+    } else {
+      isPopover = true;
+      document.body.classList.add("popover");
+      activateLog();
     }
-    $("#dbToggle").textContent = miniMode ? "⤢" : "⤡";
-    $("#dbToggle").title = miniMode ? "展开为完整视图" : "收起为迷你窗";
-    if (window.desktop) window.desktop.setMode(miniMode ? "mini" : "full");
+    if (window.desktop.onQuickRecord) {
+      window.desktop.onQuickRecord(() => activateLog());
+    }
   }
 
-  function toggleMode() {
-    miniMode = !miniMode;
-    applyMode();
+  function activateLog() {
+    $$(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === "log"));
+    $$(".view").forEach((v) => v.classList.toggle("active", v.id === "view-log"));
   }
 
   // ---------- 事件绑定 ----------
@@ -705,18 +705,9 @@
     });
     $("#resetBtn").addEventListener("click", resetAll);
 
-    // 桌面端窗口控制
+    // 弹出面板里的「详情」→ 打开完整窗口
     if (window.desktop) {
-      $("#dbToggle").addEventListener("click", toggleMode);
-      $("#dbMin").addEventListener("click", () => window.desktop.minimize());
-      $("#dbClose").addEventListener("click", () => window.desktop.close());
-      // 全局快捷键唤起 → 切到迷你快速记录
-      if (window.desktop.onQuickRecord) {
-        window.desktop.onQuickRecord(() => {
-          miniMode = true;
-          applyMode();
-        });
-      }
+      $("#phMore").addEventListener("click", () => window.desktop.openFull());
     }
   }
 
