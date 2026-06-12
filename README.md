@@ -150,4 +150,4 @@ xattr -cr "/Applications/打工状态记录器.app"
 
 ## License
 
-建议以 MIT 协议开源（自由使用、修改、分发）。如需启用，在仓库根目录添加一个 `LICENSE` 文件即可。
+[MIT](LICENSE) © Gygkimo95 — 自由使用、修改、分发。
