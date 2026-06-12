@@ -54,7 +54,20 @@ npm start        # 启动悬浮小窗
 npm run dist     # 为当前系统出安装包（Win→.exe / mac→.dmg / Linux→AppImage）
 ```
 
-> 注意：`.dmg` 一般需在 macOS 上构建，`.exe` 在 Windows 上构建。要三平台一次出包，推荐用 GitHub Actions 的三平台矩阵 + `electron-builder`。
+> 注意：`.dmg` 一般需在 macOS 上构建，`.exe` 在 Windows 上构建。
+
+### 三平台自动出包（GitHub Actions）
+
+仓库已内置工作流 `.github/workflows/build.yml`，在 Mac / Windows / Linux 三平台并行构建：
+
+- **手动触发**：GitHub 仓库 → Actions → “Build Desktop Apps” → Run workflow，构建产物在该次运行的 Artifacts 里下载。
+- **打标签发版**：推送 `v*` 标签会自动构建并把安装包附到对应 Release：
+
+```bash
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+这样在新 Mac 上**连构建都不用**，直接下载 `.dmg` 安装即可（首次打开仍需对未签名 App 右键“打开”）。
 
 ## 数据与隐私
 
