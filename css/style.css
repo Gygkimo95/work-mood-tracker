@@ -203,11 +203,12 @@ h1, h2, h3, .ph-title { font-family: var(--font-hand); letter-spacing: 0.4px; }
 }
 .state-grid .state-btn:nth-child(2n)::after { transform: translateX(-50%) rotate(6deg); }
 
-.state-btn:hover {
+/* 用 .state-grid 前缀提高优先级，确保所有卡片（含被 nth-child 旋转的）都吃到悬停微交互 */
+.state-grid .state-btn:hover {
   transform: rotate(0deg) translateY(-3px);
   box-shadow: 3px 5px 0 rgba(59, 53, 40, 0.16);
 }
-.state-btn:active { transform: rotate(0deg) scale(0.96); }
+.state-grid .state-btn:active { transform: rotate(0deg) scale(0.96); }
 
 .state-btn .emoji { font-size: 34px; line-height: 1; }
 .state-btn .label { font-size: 15px; font-weight: 700; }

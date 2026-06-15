@@ -180,6 +180,14 @@ app.whenReady().then(() => {
             { role: "cut" }, { role: "copy" }, { role: "paste" }, { role: "selectAll" },
           ],
         },
+        // Window 菜单：提供 Cmd+W 关闭当前窗口、Cmd+M 最小化等标准快捷键
+        {
+          label: "Window",
+          submenu: [
+            { role: "minimize" },
+            { role: "close", accelerator: "CommandOrControl+W" },
+          ],
+        },
       ])
     );
   }
