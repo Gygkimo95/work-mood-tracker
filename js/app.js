@@ -171,14 +171,83 @@
       const li = document.createElement("li");
       const emoji = s ? s.emoji : "❔";
       const label = s ? s.label : "已删除的状态";
-      li.innerHTML = `
+      const main = document.createElement("div");
+      main.className = "r-main";
+      main.innerHTML = `
         <span class="r-emoji">${emoji}</span>
         <span class="r-label">${escapeHtml(label)}</span>
         <span class="r-time">${fmtTime(l.ts)}</span>
         <button class="r-del" title="删除">✕</button>`;
-      li.querySelector(".r-del").addEventListener("click", () => deleteLog(l.id));
+      main.querySelector(".r-del").addEventListener("click", () => deleteLog(l.id));
+      li.appendChild(main);
+      li.appendChild(noteEl(l));
       list.appendChild(li);
     });
+  }
+
+  // 给单条记录补/改一句备注（事后随时点）。日志对象直接引用 data.logs，改动即落数据。
+  function noteEl(log) {
+    const wrap = document.createElement("div");
+    wrap.className = "note-line";
+
+    function renderView() {
+      wrap.innerHTML = "";
+      const btn = document.createElement("button");
+      btn.type = "button";
+      if (log.note) {
+        btn.className = "note-text";
+        btn.textContent = log.note;
+        btn.title = "点击修改备注";
+      } else {
+        btn.className = "note-add";
+        btn.textContent = "＋ 写点原因…";
+        btn.title = "记一句当时的原因";
+      }
+      btn.addEventListener("click", startEdit);
+      wrap.appendChild(btn);
+    }
+
+    function startEdit() {
+      let closed = false;
+      wrap.innerHTML = "";
+      const ta = document.createElement("textarea");
+      ta.className = "note-input";
+      ta.rows = 1;
+      ta.maxLength = 200;
+      ta.value = log.note || "";
+      ta.placeholder = "记一句原因，比如：又被 XX 需求反复改…";
+      wrap.appendChild(ta);
+      autoGrow(ta);
+      ta.focus();
+      ta.setSelectionRange(ta.value.length, ta.value.length);
+
+      const close = (saveIt) => {
+        if (closed) return;
+        closed = true;
+        if (saveIt) {
+          const v = ta.value.trim();
+          const changed = (log.note || "") !== v;
+          if (v) log.note = v; else delete log.note;
+          if (changed) { save(); toast(v ? "已记下原因" : "已清空备注"); }
+        }
+        renderView();
+      };
+
+      ta.addEventListener("input", () => autoGrow(ta));
+      ta.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); close(true); }
+        else if (e.key === "Escape") { e.preventDefault(); close(false); }
+      });
+      ta.addEventListener("blur", () => close(true));
+    }
+
+    renderView();
+    return wrap;
+  }
+
+  function autoGrow(ta) {
+    ta.style.height = "auto";
+    ta.style.height = ta.scrollHeight + "px";
   }
 
   function deleteLog(id) {
@@ -253,13 +322,17 @@
       const s = stateById(l.stateId);
       const color = s ? catColor(s.category) : "#bbb";
       const li = document.createElement("li");
-      li.innerHTML = `
+      const main = document.createElement("div");
+      main.className = "t-main";
+      main.innerHTML = `
         <span class="t-time">${fmtTime(l.ts)}</span>
         <span class="t-dot" style="background:${color}"></span>
         <span class="t-emoji">${s ? s.emoji : "❔"}</span>
         <span class="t-label">${escapeHtml(s ? s.label : "已删除的状态")}</span>
         <button class="t-del" title="删除">✕</button>`;
-      li.querySelector(".t-del").addEventListener("click", () => deleteLog(l.id));
+      main.querySelector(".t-del").addEventListener("click", () => deleteLog(l.id));
+      li.appendChild(main);
+      li.appendChild(noteEl(l));
       list.appendChild(li);
     });
   }
