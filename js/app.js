@@ -4,13 +4,13 @@
 
   const STORAGE_KEY = "work-mood-tracker:v1";
 
-  // 四大类定义（觉察的核心：把状态归类，才能看出时间流向）
-  const CATEGORIES = {
-    flow:     { name: "心流产出", color: "#4caf7d", desc: "真正在创造价值" },
-    drain:    { name: "内耗痛苦", color: "#e26d6d", desc: "消耗但没产出" },
-    recharge: { name: "恢复摸鱼", color: "#6aa6e0", desc: "主动/被动充电" },
-    regulate: { name: "调节求助", color: "#c79a4b", desc: "想把状态扳回来" },
-  };
+  // 默认类型（觉察的核心：把状态归类，才能看出时间流向）。现已可自由增删改。
+  const DEFAULT_CATEGORIES = [
+    { id: "flow",     name: "心流产出", color: "#4caf7d", desc: "真正在创造价值" },
+    { id: "drain",    name: "内耗痛苦", color: "#e26d6d", desc: "消耗但没产出" },
+    { id: "recharge", name: "恢复摸鱼", color: "#6aa6e0", desc: "主动/被动充电" },
+    { id: "regulate", name: "调节求助", color: "#c79a4b", desc: "想把状态扳回来" },
+  ];
 
   const DEFAULT_STATES = [
     { id: "s1", emoji: "😖", label: "痛苦面具", category: "drain" },
@@ -43,11 +43,19 @@
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && Array.isArray(parsed.states) && Array.isArray(parsed.logs)) {
+          // 旧数据迁移：补上 categories 字段
+          if (!Array.isArray(parsed.categories) || parsed.categories.length === 0) {
+            parsed.categories = structuredClone(DEFAULT_CATEGORIES);
+          }
           return parsed;
         }
       }
     } catch (e) { /* ignore */ }
-    return { states: structuredClone(DEFAULT_STATES), logs: [] };
+    return {
+      states: structuredClone(DEFAULT_STATES),
+      logs: [],
+      categories: structuredClone(DEFAULT_CATEGORIES),
+    };
   }
 
   function save() {
@@ -62,6 +70,16 @@
 
   function stateById(id) {
     return data.states.find((s) => s.id === id);
+  }
+
+  function categories() {
+    return data.categories || [];
+  }
+  function catById(id) {
+    return categories().find((c) => c.id === id);
+  }
+  function catColor(id) {
+    return catById(id)?.color || "#999";
   }
 
   // ---------- 工具 ----------
@@ -109,7 +127,7 @@
     data.states.forEach((s) => {
       const btn = document.createElement("button");
       btn.className = "state-btn";
-      btn.style.setProperty("--c", CATEGORIES[s.category]?.color || "#999");
+      btn.style.setProperty("--c", catColor(s.category));
       btn.innerHTML = `<span class="emoji">${s.emoji}</span><span class="label">${escapeHtml(s.label)}</span>`;
       btn.addEventListener("click", () => {
         logState(s.id);
@@ -119,6 +137,7 @@
       });
       grid.appendChild(btn);
     });
+    requestPopoverResize();
   }
 
   function logState(stateId) {
@@ -206,7 +225,7 @@
     const pct = 100 / dayLogs.length;
     dayLogs.forEach((l) => {
       const s = stateById(l.stateId);
-      const color = s ? CATEGORIES[s.category]?.color : "#bbb";
+      const color = s ? catColor(s.category) : "#bbb";
       const seg = document.createElement("div");
       seg.className = "band-seg";
       seg.style.width = pct + "%";
@@ -232,7 +251,7 @@
     }
     dayLogs.forEach((l) => {
       const s = stateById(l.stateId);
-      const color = s ? CATEGORIES[s.category]?.color : "#bbb";
+      const color = s ? catColor(s.category) : "#bbb";
       const li = document.createElement("li");
       li.innerHTML = `
         <span class="t-time">${fmtTime(l.ts)}</span>
@@ -333,12 +352,12 @@
           for (const [k, n] of Object.entries(c.cats)) {
             if (n > domN) { domN = n; domCat = k; }
           }
-          const color = CATEGORIES[domCat]?.color || "#999";
+          const color = catColor(domCat);
           const alpha = 0.22 + 0.78 * (c.total / maxCount);
           cell.style.background = hexToRgba(color, alpha);
           cell.classList.add("has");
           const breakdown = Object.entries(c.cats)
-            .map(([k, n]) => `${CATEGORIES[k]?.name || k} ${n}`)
+            .map(([k, n]) => `${catById(k)?.name || k} ${n}`)
             .join("、");
           cell.title = `周${WEEKDAY_LABELS[wd]} ${h}:00 · 共 ${c.total} 条\n${breakdown}`;
         }
@@ -346,10 +365,10 @@
       }
     }
 
-    // 图例：四类色 + 深浅说明
-    Object.values(CATEGORIES).forEach((cat) => {
+    // 图例：各类色 + 深浅说明
+    categories().forEach((cat) => {
       const item = el("div", "item");
-      item.innerHTML = `<span class="swatch" style="background:${cat.color}"></span>${cat.name}`;
+      item.innerHTML = `<span class="swatch" style="background:${cat.color}"></span>${escapeHtml(cat.name)}`;
       legend.appendChild(item);
     });
     const scale = el("div", "scale");
@@ -381,11 +400,13 @@
     });
     const pct = (n) => (total ? Math.round((n / total) * 100) : 0);
 
+    const flowName = catById("flow")?.name || "心流产出";
+    const drainName = catById("drain")?.name || "内耗痛苦";
     const items = [
       { big: total, lbl: "总记录数" },
       { big: days, lbl: "有记录的天数" },
-      { big: pct(flow) + "%", lbl: "心流产出占比" },
-      { big: pct(drain) + "%", lbl: "内耗痛苦占比" },
+      { big: pct(flow) + "%", lbl: flowName + "占比" },
+      { big: pct(drain) + "%", lbl: drainName + "占比" },
     ];
     cards.innerHTML = items
       .map((it) => `<div class="stat-card"><div class="big">${it.big}</div><div class="lbl">${it.lbl}</div></div>`)
@@ -395,7 +416,8 @@
   function renderCatBar(logs) {
     const bar = $("#catBar");
     const legend = $("#catLegend");
-    const counts = { flow: 0, drain: 0, recharge: 0, regulate: 0 };
+    const counts = {};
+    categories().forEach((c) => { counts[c.id] = 0; });
     logs.forEach((l) => {
       const s = stateById(l.stateId);
       if (s && counts[s.category] !== undefined) counts[s.category]++;
@@ -409,8 +431,8 @@
       return;
     }
 
-    Object.entries(CATEGORIES).forEach(([key, cat]) => {
-      const n = counts[key];
+    categories().forEach((cat) => {
+      const n = counts[cat.id];
       const pct = (n / total) * 100;
       if (pct > 0) {
         const seg = document.createElement("div");
@@ -424,7 +446,7 @@
       const item = document.createElement("div");
       item.className = "item";
       item.innerHTML = `<span class="swatch" style="background:${cat.color}"></span>
-        ${cat.name} <span class="pct">${n} 次 · ${Math.round(pct)}%</span>`;
+        ${escapeHtml(cat.name)} <span class="pct">${n} 次 · ${Math.round(pct)}%</span>`;
       legend.appendChild(item);
     });
   }
@@ -445,7 +467,7 @@
     }
     const max = rows[0].n;
     rows.forEach((r) => {
-      const color = CATEGORIES[r.s.category]?.color || "#bbb";
+      const color = catColor(r.s.category);
       const row = document.createElement("div");
       row.className = "rank-row";
       row.innerHTML = `
@@ -458,13 +480,15 @@
 
   // ---------- 设置页 ----------
   function fillCategorySelect(sel, selected) {
-    sel.innerHTML = Object.entries(CATEGORIES)
-      .map(([key, c]) => `<option value="${key}" ${key === selected ? "selected" : ""}>${c.name}</option>`)
+    const cats = categories();
+    sel.innerHTML = cats
+      .map((c) => `<option value="${c.id}" ${c.id === selected ? "selected" : ""}>${escapeHtml(c.name)}</option>`)
       .join("");
   }
 
   function renderSettings() {
-    fillCategorySelect($("#newCategory"), "flow");
+    renderCategoryManager();
+    fillCategorySelect($("#newCategory"), categories()[0]?.id);
     const list = $("#manageList");
     list.innerHTML = "";
     if (data.states.length === 0) {
@@ -472,14 +496,14 @@
       return;
     }
     data.states.forEach((s) => {
-      const cat = CATEGORIES[s.category];
+      const cat = catById(s.category);
       const li = document.createElement("li");
       li.innerHTML = `
         <span class="m-emoji">${s.emoji}</span>
         <span class="m-label">${escapeHtml(s.label)}</span>
-        <span class="m-cat" style="background:${cat?.color || "#999"}">${cat?.name || "未分类"}</span>
+        <span class="m-cat" style="background:${cat?.color || "#999"}">${escapeHtml(cat?.name || "未分类")}</span>
         <span class="m-actions">
-          <button class="m-btn edit" title="改分类">🏷️</button>
+          <button class="m-btn edit" title="切换类型">🏷️</button>
           <button class="m-btn del" title="删除">✕</button>
         </span>`;
       li.querySelector(".edit").addEventListener("click", () => cycleCategory(s.id));
@@ -491,13 +515,93 @@
   function cycleCategory(id) {
     const s = stateById(id);
     if (!s) return;
-    const keys = Object.keys(CATEGORIES);
+    const keys = categories().map((c) => c.id);
+    if (keys.length === 0) return;
     const idx = keys.indexOf(s.category);
     s.category = keys[(idx + 1) % keys.length];
     save();
     renderSettings();
     renderStateGrid();
-    toast(`「${s.label}」已归类到 ${CATEGORIES[s.category].name}`);
+    toast(`「${s.label}」已归类到 ${catById(s.category)?.name || ""}`);
+  }
+
+  // ---------- 类型（大类）管理 ----------
+  function renderCategoryManager() {
+    const list = $("#catManageList");
+    if (!list) return;
+    list.innerHTML = "";
+    if (categories().length === 0) {
+      list.innerHTML = `<div class="empty">还没有类型，先在上面加一个吧</div>`;
+      return;
+    }
+    categories().forEach((c) => {
+      const used = data.states.filter((s) => s.category === c.id).length;
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <input type="color" class="m-color" value="${c.color}" title="改颜色" />
+        <span class="m-label">${escapeHtml(c.name)}</span>
+        <span class="m-cat" style="background:${c.color}">${used} 个状态</span>
+        <span class="m-actions">
+          <button class="m-btn edit" title="改名">✏️</button>
+          <button class="m-btn del" title="删除类型">✕</button>
+        </span>`;
+      li.querySelector(".m-color").addEventListener("change", (e) => updateCategory(c.id, { color: e.target.value }));
+      li.querySelector(".edit").addEventListener("click", () => renameCategory(c.id));
+      li.querySelector(".del").addEventListener("click", () => deleteCategory(c.id));
+      list.appendChild(li);
+    });
+  }
+
+  function renameCategory(id) {
+    const c = catById(id);
+    if (!c) return;
+    const name = prompt("给这个类型改个名字", c.name);
+    if (name == null) return;
+    const trimmed = name.trim();
+    if (trimmed) updateCategory(id, { name: trimmed });
+  }
+
+  function addCategory(name, color) {
+    data.categories.push({ id: uid(), name, color: color || "#888888", desc: "" });
+    save();
+    renderSettings();
+    renderStateGrid();
+    if ($("#view-stats").classList.contains("active")) renderStats();
+    toast(`已添加类型「${name}」`);
+  }
+
+  function updateCategory(id, patch) {
+    const c = catById(id);
+    if (!c) return;
+    Object.assign(c, patch);
+    save();
+    renderSettings();
+    renderStateGrid();
+    if ($("#view-stats").classList.contains("active")) renderStats();
+    if ($("#view-timeline").classList.contains("active")) renderTimeline();
+  }
+
+  function deleteCategory(id) {
+    const c = catById(id);
+    if (!c) return;
+    const used = data.states.filter((s) => s.category === id).length;
+    const remain = categories().filter((x) => x.id !== id);
+    if (remain.length === 0) {
+      toast("至少保留一个类型");
+      return;
+    }
+    const msg = used > 0
+      ? `删除类型「${c.name}」？\n有 ${used} 个状态属于它，将被改归到「${remain[0].name}」。`
+      : `删除类型「${c.name}」？`;
+    if (!confirm(msg)) return;
+    data.states.forEach((s) => { if (s.category === id) s.category = remain[0].id; });
+    data.categories = remain;
+    save();
+    renderSettings();
+    renderStateGrid();
+    if ($("#view-stats").classList.contains("active")) renderStats();
+    if ($("#view-timeline").classList.contains("active")) renderTimeline();
+    toast("已删除该类型");
   }
 
   function deleteState(id) {
@@ -538,6 +642,9 @@
         const parsed = JSON.parse(reader.result);
         if (!parsed || !Array.isArray(parsed.states) || !Array.isArray(parsed.logs)) {
           throw new Error("格式不对");
+        }
+        if (!Array.isArray(parsed.categories) || parsed.categories.length === 0) {
+          parsed.categories = structuredClone(DEFAULT_CATEGORIES);
         }
         data = parsed;
         save();
@@ -633,6 +740,21 @@
   function activateLog() {
     $$(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === "log"));
     $$(".view").forEach((v) => v.classList.toggle("active", v.id === "view-log"));
+    requestPopoverResize();
+  }
+
+  // 弹出面板：随状态数量自适应高度（超过上限则内部滚动），避免只能看到固定几个
+  function requestPopoverResize() {
+    if (!isPopover || !window.desktop || !window.desktop.resize) return;
+    requestAnimationFrame(() => {
+      const head = $(".popover-head");
+      const view = $("#view-log");
+      if (!view) return;
+      const h = Math.ceil(
+        (head ? head.offsetHeight : 0) + view.scrollHeight + 24 /* content padding */ + 18 /* body padding */
+      );
+      window.desktop.resize(h);
+    });
   }
 
   // ---------- 事件绑定 ----------
@@ -690,10 +812,20 @@
       e.preventDefault();
       const label = $("#newLabel").value.trim();
       if (!label) { toast("先给状态起个名字吧"); return; }
+      if (categories().length === 0) { toast("先添加一个类型吧"); return; }
       addState(selectedEmoji, label, $("#newCategory").value);
       $("#newLabel").value = "";
       selectedEmoji = DEFAULT_EMOJI;
       $("#etEmoji").textContent = DEFAULT_EMOJI;
+    });
+
+    // 添加类型
+    $("#catAddForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = $("#newCatName").value.trim();
+      if (!name) { toast("先给类型起个名字吧"); return; }
+      addCategory(name, $("#newCatColor").value);
+      $("#newCatName").value = "";
     });
 
     // 数据管理

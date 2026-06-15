@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld("desktop", {
   },
   // 弹出面板：记录完隐藏自己
   hide: () => ipcRenderer.send("hide-window"),
+  // 弹出面板：按内容自适应高度
+  resize: (height) => ipcRenderer.send("resize-popover", height),
   // 打开完整窗口
   openFull: () => ipcRenderer.send("open-full"),
   // 菜单栏/快捷键唤起 → 切到快速记录

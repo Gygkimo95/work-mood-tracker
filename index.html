@@ -102,9 +102,20 @@
       <section class="view" id="view-settings">
         <div class="settings-head">
           <h2>自定义你的状态</h2>
-          <p class="hint">增删状态词，给每个词选一个所属大类，统计会更懂你</p>
+          <p class="hint">增删状态词与类型，给每个词选一个所属类型，统计会更懂你</p>
         </div>
 
+        <h3 class="sub-head sub-head-first">状态类型</h3>
+        <p class="hint sub-hint">类型决定统计里时间的去向，可增删、改名、换色</p>
+        <form class="add-form" id="catAddForm" autocomplete="off">
+          <input type="color" id="newCatColor" class="color-input" value="#4caf7d" title="选颜色" />
+          <input type="text" id="newCatName" class="label-input" maxlength="8" placeholder="新类型名，如「学习成长」" />
+          <button type="submit" class="add-btn">添加类型</button>
+        </form>
+        <ul class="manage-list" id="catManageList"></ul>
+
+        <h3 class="sub-head">状态词</h3>
+        <p class="hint sub-hint">增删状态词，给每个词选一个所属类型</p>
         <form class="add-form" id="addForm" autocomplete="off">
           <div class="emoji-field">
             <button type="button" class="emoji-trigger" id="emojiTrigger" aria-haspopup="true" aria-expanded="false">
@@ -117,7 +128,6 @@
           <select id="newCategory" class="cat-select"></select>
           <button type="submit" class="add-btn">添加</button>
         </form>
-
         <ul class="manage-list" id="manageList"></ul>
 
         <div class="danger-zone">

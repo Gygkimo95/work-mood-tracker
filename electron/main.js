@@ -4,7 +4,7 @@ const {
 const path = require("path");
 const fs = require("fs");
 
-const POPOVER = { width: 380, height: 320 };
+const POPOVER = { width: 380, height: 320, minHeight: 180, maxHeight: 620 };
 const FULL = { width: 900, height: 760 };
 const QUICK_SHORTCUT = "CommandOrControl+Shift+Space";
 const isMac = process.platform === "darwin";
@@ -151,6 +151,17 @@ ipcMain.on("store:save", (_e, json) => {
 // ---------- 渲染进程的窗口控制 ----------
 ipcMain.on("hide-window", () => {
   if (popover && !popover.isDestroyed()) popover.hide();
+});
+ipcMain.on("resize-popover", (_e, height) => {
+  if (!popover || popover.isDestroyed()) return;
+  const disp = tray && isMac
+    ? screen.getDisplayNearestPoint(tray.getBounds())
+    : screen.getPrimaryDisplay();
+  const cap = Math.min(POPOVER.maxHeight, disp.workArea.height - 80);
+  const h = Math.max(POPOVER.minHeight, Math.min(Math.round(height) || POPOVER.height, cap));
+  const { width } = popover.getBounds();
+  popover.setBounds({ ...popover.getBounds(), width, height: h });
+  positionPopover();
 });
 ipcMain.on("open-full", openFull);
 
