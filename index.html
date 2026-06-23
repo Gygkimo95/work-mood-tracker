@@ -38,6 +38,25 @@
         </div>
         <div class="state-grid" id="stateGrid"></div>
 
+        <!-- 选完状态就地补一句原因（仅弹出面板用），省去「再唤起→进详情→找记录」的长路径 -->
+        <div class="confirm-step" id="confirmStep" hidden>
+          <div class="cs-card">
+            <span class="cs-emoji" id="csEmoji">🙂</span>
+            <div class="cs-meta">
+              <span class="cs-label" id="csLabel">已记录</span>
+              <span class="cs-time" id="csTime"></span>
+            </div>
+            <span class="cs-badge">已记录 ✓</span>
+          </div>
+          <textarea class="cs-note" id="csNote" rows="1" maxlength="200"
+            placeholder="顺手补一句原因？比如：又被 XX 需求反复改…（可跳过）"></textarea>
+          <div class="cs-actions">
+            <button type="button" class="cs-skip" id="csSkip">跳过</button>
+            <button type="button" class="cs-done" id="csDone">记下原因 ↵</button>
+          </div>
+          <div class="cs-progress" id="csProgress"><i></i></div>
+        </div>
+
         <div class="recent-block">
           <div class="recent-head">
             <h3>今天刚刚记的</h3>

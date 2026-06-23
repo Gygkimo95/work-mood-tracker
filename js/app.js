@@ -141,18 +141,87 @@
   }
 
   function logState(stateId) {
-    data.logs.push({ id: uid(), stateId, ts: Date.now() });
+    const log = { id: uid(), stateId, ts: Date.now() };
+    data.logs.push(log);
     save();
     const s = stateById(stateId);
-    toast(`已记录 · ${s.emoji} ${s.label}`);
     renderRecent();
     // 若时间线/统计正展示，保持同步
     if ($("#view-timeline").classList.contains("active")) renderTimeline();
     if ($("#view-stats").classList.contains("active")) renderStats();
-    // 弹出面板：记录完短暂展示反馈后自动收起
+    // 弹出面板：选完就地补一句原因（可跳过），再收起；网页/完整窗口下方已有备注入口
     if (isPopover && window.desktop) {
-      setTimeout(() => window.desktop.hide(), 550);
+      showNoteStep(log, s);
+    } else {
+      toast(`已记录 · ${s.emoji} ${s.label}`);
     }
+  }
+
+  // 弹出面板的「补一句原因」小步骤：选完状态即可顺手备注，倒计时内不操作就自动收起
+  let noteStepTimer = null;
+  const NOTE_STEP_MS = 5000;
+
+  function resetLogView() {
+    clearTimeout(noteStepTimer);
+    noteStepTimer = null;
+    const step = $("#confirmStep");
+    const grid = $("#stateGrid");
+    if (step) step.hidden = true;
+    if (grid) grid.hidden = false;
+  }
+
+  function showNoteStep(log, s) {
+    const step = $("#confirmStep");
+    const grid = $("#stateGrid");
+    const ta = $("#csNote");
+    const prog = $("#csProgress");
+
+    $("#csEmoji").textContent = s ? s.emoji : "❔";
+    $("#csLabel").textContent = s ? s.label : "已记录";
+    $("#csTime").textContent = fmtTime(log.ts);
+    ta.value = "";
+    ta.style.height = "auto";
+
+    grid.hidden = true;
+    step.hidden = false;
+    requestPopoverResize();
+
+    let done = false;
+    const stopCountdown = () => {
+      clearTimeout(noteStepTimer);
+      noteStepTimer = null;
+      prog.classList.remove("run");
+      prog.style.visibility = "hidden";
+    };
+    const finish = (saveIt) => {
+      if (done) return;
+      done = true;
+      stopCountdown();
+      if (saveIt) {
+        const v = ta.value.trim();
+        if (v) { log.note = v; save(); renderRecent(); }
+      }
+      if (window.desktop) window.desktop.hide();
+      resetLogView();
+    };
+
+    ta.oninput = () => { stopCountdown(); autoGrow(ta); requestPopoverResize(); };
+    ta.onkeydown = (e) => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); finish(true); }
+      else if (e.key === "Escape") { e.preventDefault(); finish(false); }
+    };
+    $("#csDone").onclick = () => finish(true);
+    $("#csSkip").onclick = () => finish(false);
+
+    prog.style.visibility = "visible";
+    prog.style.setProperty("--ms", NOTE_STEP_MS + "ms");
+    prog.classList.remove("run");
+    void prog.offsetWidth; // 重启进度条动画
+    prog.classList.add("run");
+    clearTimeout(noteStepTimer);
+    noteStepTimer = setTimeout(() => finish(false), NOTE_STEP_MS);
+
+    ta.focus();
   }
 
   function renderRecent() {
@@ -811,6 +880,7 @@
   }
 
   function activateLog() {
+    resetLogView();
     $$(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === "log"));
     $$(".view").forEach((v) => v.classList.toggle("active", v.id === "view-log"));
     requestPopoverResize();

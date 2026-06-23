@@ -1,6 +1,6 @@
 {
   "name": "work-mood-tracker",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "打工状态记录器 · 桌面悬浮小组件",
   "main": "electron/main.js",
   "scripts": {
