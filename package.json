@@ -2,15 +2,23 @@
   "name": "work-mood-tracker",
   "version": "0.4.0",
   "description": "打工状态记录器 · 桌面悬浮小组件",
+  "author": "Gygkimo95",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Gygkimo95/work-mood-tracker.git"
+  },
   "main": "electron/main.js",
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder",
-    "dist:all": "electron-builder -mwl"
+    "dist:all": "electron-builder -mwl",
+    "release": "npm version patch && git push --follow-tags"
   },
   "build": {
     "appId": "com.workmood.tracker",
     "productName": "打工状态记录器",
+    "artifactName": "${name}-${version}-${arch}.${ext}",
     "files": [
       "index.html",
       "css/**",
@@ -18,7 +26,12 @@
       "electron/**"
     ],
     "mac": {
-      "target": "dmg",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["arm64", "x64"]
+        }
+      ],
       "category": "public.app-category.productivity",
       "icon": "build/icon.png"
     },

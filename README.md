@@ -80,26 +80,39 @@ npm start        # 启动；图标出现在 macOS 顶部菜单栏
 
 > Windows / Linux：系统托盘图标需要图标资源文件，暂未补；当前在这两个平台会直接打开完整窗口，菜单栏/托盘体验以 macOS 为准。
 
-### 打包成安装包
+### 发版（推荐：打 tag，由 CI 出包）
+
+**正式发布一律走打标签的方式**，让 GitHub Actions 从这个被提交、打了标签的 commit 构建——这样产物永远对应仓库里的真实代码，**杜绝"本地旧代码打了个旧包"的坑**。
+
+一条命令搞定（自动 patch 版本号 → 提交 → 打 tag → 推送，触发 CI）：
 
 ```bash
-npm run dist     # 为当前系统出安装包（Win→.exe / mac→.dmg / Linux→AppImage）
+npm run release        # 0.4.0 → 0.4.1，并推送 v0.4.1 标签
 ```
 
-> 注意：`.dmg` 一般需在 macOS 上构建，`.exe` 在 Windows 上构建。
-
-### 三平台自动出包（GitHub Actions）
-
-仓库已内置工作流 `.github/workflows/build.yml`，在 Mac / Windows / Linux 三平台并行构建：
-
-- **手动触发**：GitHub 仓库 → Actions → “Build Desktop Apps” → Run workflow，构建产物在该次运行的 Artifacts 里下载。
-- **打标签发版**：推送 `v*` 标签会自动构建并把安装包附到对应 Release：
+想自己控制版本号时，等价的手动写法：
 
 ```bash
-git tag v0.1.0 && git push origin v0.1.0
+npm version minor      # 或 patch / major，会改 package.json 并打好 tag
+git push --follow-tags
 ```
 
-这样在新 Mac 上**连构建都不用**，直接下载 `.dmg` 安装即可。
+推送标签后：
+
+1. 到 GitHub 仓库 → **Actions** 看 “Build Desktop Apps” 跑完（Mac / Windows / Linux 三平台并行）。
+2. 跑完后产物会自动挂到对应的 **Release** 上（`.dmg` / `.exe` / `.AppImage`），文件名形如 `work-mood-tracker-0.4.1-arm64.dmg`。
+3. 在任意机器上**直接下载安装即可，连构建都不用**。
+
+> 也可在 Actions 里手动 “Run workflow” 只构建、不发版，产物在该次运行的 Artifacts 里下载。
+
+### 本地自己打包（仅自测用，不建议作为发版方式）
+
+```bash
+git pull                 # ⚠️ 打包前务必先拉取最新代码，否则打的是旧代码
+npm run dist             # 为当前系统出安装包（Win→.exe / mac→.dmg / Linux→AppImage）
+```
+
+> 注意：`.dmg` 一般需在 macOS 上构建，`.exe` 在 Windows 上构建。本地打包最容易出现"忘了 `git pull`、装上去发现没变化"的问题——所以发版请用上面的 tag 方式。
 
 ### macOS 打开时提示「已损坏，无法打开」？
 
