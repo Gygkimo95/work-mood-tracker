@@ -157,13 +157,20 @@
     }
   }
 
-  // 弹出面板的「补一句原因」小步骤：选完状态即可顺手备注，倒计时内不操作就自动收起
-  let noteStepTimer = null;
-  const NOTE_STEP_MS = 5000;
+  // 弹出面板的「补一句原因」小步骤：选完状态即可顺手备注。
+  // 不限时、不催促：写完按回车 / 点「记下原因」，或点回去干活（窗口失焦）即自动存好收起；
+  // 不想写就「跳过」/Esc。期间它只是安静等着，绝不丢字。
+  let noteBlurHandler = null;
+
+  function clearNoteStep() {
+    if (noteBlurHandler) {
+      window.removeEventListener("blur", noteBlurHandler);
+      noteBlurHandler = null;
+    }
+  }
 
   function resetLogView() {
-    clearTimeout(noteStepTimer);
-    noteStepTimer = null;
+    clearNoteStep();
     const step = $("#confirmStep");
     const grid = $("#stateGrid");
     if (step) step.hidden = true;
@@ -174,29 +181,22 @@
     const step = $("#confirmStep");
     const grid = $("#stateGrid");
     const ta = $("#csNote");
-    const prog = $("#csProgress");
 
     $("#csEmoji").textContent = s ? s.emoji : "❔";
     $("#csLabel").textContent = s ? s.label : "已记录";
     $("#csTime").textContent = fmtTime(log.ts);
     ta.value = "";
-    ta.style.height = "auto";
 
     grid.hidden = true;
     step.hidden = false;
+    autoGrow(ta);
     requestPopoverResize();
 
     let done = false;
-    const stopCountdown = () => {
-      clearTimeout(noteStepTimer);
-      noteStepTimer = null;
-      prog.classList.remove("run");
-      prog.style.visibility = "hidden";
-    };
     const finish = (saveIt) => {
       if (done) return;
       done = true;
-      stopCountdown();
+      clearNoteStep();
       if (saveIt) {
         const v = ta.value.trim();
         if (v) { log.note = v; save(); renderRecent(); }
@@ -205,7 +205,7 @@
       resetLogView();
     };
 
-    ta.oninput = () => { stopCountdown(); autoGrow(ta); requestPopoverResize(); };
+    ta.oninput = () => { autoGrow(ta); requestPopoverResize(); };
     ta.onkeydown = (e) => {
       if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); finish(true); }
       else if (e.key === "Escape") { e.preventDefault(); finish(false); }
@@ -213,13 +213,9 @@
     $("#csDone").onclick = () => finish(true);
     $("#csSkip").onclick = () => finish(false);
 
-    prog.style.visibility = "visible";
-    prog.style.setProperty("--ms", NOTE_STEP_MS + "ms");
-    prog.classList.remove("run");
-    void prog.offsetWidth; // 重启进度条动画
-    prog.classList.add("run");
-    clearTimeout(noteStepTimer);
-    noteStepTimer = setTimeout(() => finish(false), NOTE_STEP_MS);
+    // 点回去干活（窗口失焦）时也别丢字：保存已写内容再收起
+    noteBlurHandler = () => finish(true);
+    window.addEventListener("blur", noteBlurHandler);
 
     ta.focus();
   }

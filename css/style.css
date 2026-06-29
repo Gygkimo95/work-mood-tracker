@@ -368,12 +368,13 @@ h1, h2, h3, .ph-title { font-family: var(--font-hand); letter-spacing: 0.4px; }
   border-radius: 12px 6px 12px 6px / 6px 12px 6px 12px;
 }
 .cs-note {
-  width: 100%; resize: none; overflow: hidden; min-height: 40px;
+  width: 100%; resize: none; overflow: hidden; min-height: 62px;
   border: var(--pen) solid var(--ink);
   border-radius: 12px 8px 12px 8px / 8px 12px 8px 12px;
-  background: var(--surface); padding: 9px 11px;
-  font-size: 13px; line-height: 1.45; font-family: var(--font-body); color: var(--ink);
+  background: var(--surface); padding: 10px 12px;
+  font-size: 13px; line-height: 1.5; font-family: var(--font-body); color: var(--ink);
 }
+.cs-note::placeholder { color: var(--ink-faint); }
 .cs-note:focus { outline: none; box-shadow: var(--hand-shadow-sm); }
 .cs-actions { display: flex; gap: 10px; }
 .cs-skip, .cs-done {
@@ -386,21 +387,6 @@ h1, h2, h3, .ph-title { font-family: var(--font-hand); letter-spacing: 0.4px; }
 .cs-skip:hover { background: var(--surface-2); }
 .cs-done { background: var(--accent); color: #fff; border-color: var(--ink); }
 .cs-done:hover { filter: brightness(1.05); }
-.cs-progress {
-  height: 4px; border-radius: 4px; overflow: hidden;
-  background: var(--surface-2);
-}
-.cs-progress > i {
-  display: block; height: 100%; width: 100%;
-  background: var(--accent); transform-origin: left;
-}
-.cs-progress.run > i {
-  animation: csCountdown var(--ms, 5000ms) linear forwards;
-}
-@keyframes csCountdown {
-  from { transform: scaleX(1); }
-  to { transform: scaleX(0); }
-}
 
 /* ---------- 统计 ---------- */
 .range-switch {
