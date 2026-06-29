@@ -1,6 +1,6 @@
 {
   "name": "work-mood-tracker",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "打工状态记录器 · 桌面悬浮小组件",
   "author": "Gygkimo95",
   "license": "MIT",
@@ -29,7 +29,10 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["arm64", "x64"]
+          "arch": [
+            "arm64",
+            "x64"
+          ]
         }
       ],
       "category": "public.app-category.productivity",
